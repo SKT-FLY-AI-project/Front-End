@@ -1,3 +1,15 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        // 기존 AGP 버전이 있을 텐데, 이를 8.2.1로 변경
+        classpath 'com.android.tools.build:gradle:8.2.2'
+    }
+}
+
+
 allprojects {
     repositories {
         google()
