@@ -92,10 +92,10 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
   assets:
-    - assets/MIC_ICON.svg
-    - assets/icon_userbox.svg
-    - assets/icon_book.svg
-    - assets/icon_picbot.svg
-    - assets/icon_pictop.svg
+    - assets/picbot.png
+    - assets/pictop.png
     - assets/kakao_icon.svg
+    - assets/left_icon.svg
+    - assets/right_icon.svg
+    - assets/calender_icon.svg
       # SVG 파일 경로 추가
