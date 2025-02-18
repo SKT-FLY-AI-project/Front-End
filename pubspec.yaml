@@ -38,6 +38,7 @@ dependencies:
 
   # flutter_svg 패키지 추가
   flutter_svg: ^1.0.0  # flutter_svg 패키지 추가
+  intl: ^0.18.0
 
 dev_dependencies:
   flutter_test:
