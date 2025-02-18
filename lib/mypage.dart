@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'diary.dart';  // DiaryPage 위젯을 import
 
 void main() {
   runApp(const MyApp());
@@ -100,7 +101,15 @@ class MyPageScreen extends StatelessWidget {
               ),
               SizedBox(height: screenHeight * 0.04),
               // 설정 버튼 리스트
-              settingButton("감상 일기"),
+              settingButton(
+                "감상 일기",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const DiaryPage()),
+                  );
+                },
+              ),
               SizedBox(height: screenHeight * 0.02),
               settingButton("학습 진도"),
               SizedBox(height: screenHeight * 0.02),
@@ -121,7 +130,7 @@ class MyPageScreen extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF1E40AF),  // 테두리 색상을 진한 파란색으로 변경
+          color: const Color(0xFF1E40AF),
           width: 1,
         ),
       ),
@@ -152,26 +161,29 @@ class MyPageScreen extends StatelessWidget {
     );
   }
 
-  Widget settingButton(String text) {
-    return Container(
-      width: double.infinity,
-      height: 64,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFF1E40AF),  // 테두리 색상을 진한 파란색으로 변경
-          width: 1,
+  Widget settingButton(String text, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        height: 64,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: const Color(0xFF1E40AF),
+            width: 1,
+          ),
         ),
-      ),
-      child: Center(
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF3B82F6),
-            height: 1.2,
+        child: Center(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF3B82F6),
+              height: 1.2,
+            ),
           ),
         ),
       ),
