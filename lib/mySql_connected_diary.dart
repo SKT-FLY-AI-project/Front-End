@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:mysql1/mysql1.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'mypage.dart';
@@ -18,39 +19,42 @@ class ArtworkModel {
   });
 }
 
+// ArtworkRepository 클래스 MySQL 버전
 class ArtworkRepository {
-  static final List<ArtworkModel> _mockArtworks = [
-    ArtworkModel(
-      title: '별이 빛나는 밤', 
-      imagePath: 'pictop.png', 
-      date: DateTime(2025, 2, 19)
-    ),
-    ArtworkModel(
-      title: '사이프러스가 있는 밀밭', 
-      imagePath: 'picbot.png', 
-      date: DateTime(2025, 2, 19)
-    ),
-    ArtworkModel(
-      title: '별이 빛나는 밤', 
-      imagePath: 'pictop.png', 
-      date: DateTime(2025, 2, 20)
-    ),
-    ArtworkModel(
-      title: '사이프러스가 있는 밀밭', 
-      imagePath: 'picbot.png', 
-      date: DateTime(2025, 2, 21)
-    )
-  ];
+  static Future<List<ArtworkModel>> getArtworksByDate(DateTime date) async {
+    try {
+      // MySQL 연결 설정 (실제 값으로 대체 필요)
+      final conn = await MySqlConnection.connect(ConnectionSettings(
+        host: 'localhost',
+        port: 3306,
+        user: 'your_username',
+        password: 'your_password',
+        db: 'your_database_name'
+      ));
 
-  static List<ArtworkModel> getArtworksByDate(DateTime date) {
-    return _mockArtworks.where((artwork) => 
-      artwork.date.year == date.year &&
-      artwork.date.month == date.month &&
-      artwork.date.day == date.day
-    ).toList();
+          // 날짜 형식 변환
+      String formattedDate = DateFormat('yyyy-MM-dd').format(date);
+
+      // 쿼리 수정 (prepared statement 사용)
+      final results = await conn.query(
+        'SELECT title, imagePath FROM artworks WHERE DATE(date) = ?', 
+        [formattedDate]
+      );
+
+      await conn.close();
+
+      return results.map((row) => ArtworkModel(
+        title: row[0].toString(),
+        imagePath: row[1].toString(),
+        date: date
+      )).toList();
+    } catch (e) {
+      print('데이터베이스 오류: $e');
+      // 로깅 고려
+      return [];
+    }
   }
 }
-
 void main() {
   runApp(const MyApp());
 }
@@ -84,6 +88,7 @@ class _DiaryPageState extends State<DiaryPage> {
   String _searchText = "찾으시는 작품 있으세요?";
   
   List<Map<String, String>> _artworks = [];
+  bool _isLoading = false;
 
 
   @override
@@ -93,16 +98,29 @@ class _DiaryPageState extends State<DiaryPage> {
     _loadArtworksForSelectedDate();
   }
 
-  // 선택된 날짜의 작품 로드
-  void _loadArtworksForSelectedDate() {
-    final artworksForDate = ArtworkRepository.getArtworksByDate(selectedDate);
-    
-    setState(() {
-      _artworks = artworksForDate.map((artwork) => {
-        'title': artwork.title,
-        'imagePath': artwork.imagePath
-      }).toList();
+  // 선택된 날짜의 작품 로드 (비동기 메서드로 수정)
+  void _loadArtworksForSelectedDate() async {
+     setState(() {
+      _isLoading = true;
     });
+
+    try {
+      final artworksForDate = await ArtworkRepository.getArtworksByDate(selectedDate);
+      
+      setState(() {
+        _artworks = artworksForDate.map((artwork) => {
+          'title': artwork.title,
+          'imagePath': artwork.imagePath
+        }).toList();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      // 에러 처리
+      _showErrorDialog("작품을 불러오는 중 오류가 발생했습니다.");
+    }
   }
 
 
@@ -219,7 +237,7 @@ class _DiaryPageState extends State<DiaryPage> {
     );
   }
 
-  // 날짜 변경 메서드 수정
+    // 날짜 변경 메서드 수정
   void _changeDate(bool isNext) {
     setState(() {
       selectedDate = isNext 
@@ -231,6 +249,7 @@ class _DiaryPageState extends State<DiaryPage> {
     _loadArtworksForSelectedDate();
   }
 
+  // 날짜 선택 시 작품 로드
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -260,6 +279,8 @@ class _DiaryPageState extends State<DiaryPage> {
       setState(() {
         selectedDate = picked;
       });
+       // 날짜 선택 후 바로 작품 로드
+      _loadArtworksForSelectedDate();
     }
   }
 
@@ -342,7 +363,13 @@ Widget build(BuildContext context) {
           ),
         ),
         
-        Expanded(
+        _isLoading 
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF1E40AF),
+                ),
+              )
+            : Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
