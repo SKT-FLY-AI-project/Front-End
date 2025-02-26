@@ -258,169 +258,221 @@ class _VtsScreenState extends State<VtsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      appBar: AppBar(
-        title: const Text(
-          'VTS 대화',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
-        centerTitle: true,
+    return WillPopScope(
+      onWillPop: () async {
+        await ttsService.stop();
+        return true;
+      },
+      child: Scaffold(
         backgroundColor: const Color(0xFFF5F5F5),
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _isMuted ? Icons.volume_off : Icons.volume_up,
-              color: Colors.black,
-            ),
-            onPressed: () {
-              setState(() {
-                _isMuted = !_isMuted;
-              });
-              // mute 상태에 따라 TTS의 볼륨을 조절합니다.
-              ttsService.setMute(_isMuted);
-            },
-          )
-        ],
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                widget.imageUrl,
-                width: double.infinity,
-                height: 200,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    width: double.infinity,
-                    height: 200,
-                    color: Colors.grey[300],
-                    child: const Center(child: CircularProgressIndicator()),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: double.infinity,
-                    height: 200,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.error),
-                  );
-                },
+        appBar: AppBar(
+          title: Semantics(
+            header: true,
+            label: '아티와 대화하기. 아래쪽의 입력창을 통해 챗봇 아티와 대화해보세요.',
+            child: const Text(
+              '아티와 대화하기',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
               ),
             ),
           ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: Stack(
-              children: [
-                ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: conversation.length,
-                  itemBuilder: (context, index) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (conversation[index]["question"]!.isNotEmpty)
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: _buildUserMessageBlock(conversation[index]["question"]!),
-                          ),
-                        const SizedBox(height: 12),
-                        if (conversation[index]["response"]!.isNotEmpty)
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: _buildBotResponseBlock(conversation[index]["response"]!),
-                          ),
-                        const SizedBox(height: 24),
-                      ],
-                    );
-                  },
-                ),
-                if (_isLoading)
-                  const Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 20,
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-              ],
+          centerTitle: true,
+          backgroundColor: const Color(0xFFF5F5F5),
+          elevation: 0,
+          leading: Semantics(
+            label: '뒤로가기 버튼',
+            button: true,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.black),
+              onPressed: () {
+                ttsService.stop();
+                Navigator.pop(context);
+              },
             ),
           ),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
+          actions: [
+            Semantics(
+              label: _isMuted ? '음소거 켜짐, 해제하려면 터치' : '음소거 꺼짐, 켜려면 터치',
+              button: true,
+              child: IconButton(
+                icon: Icon(
+                  _isMuted ? Icons.volume_off : Icons.volume_up,
+                  color: Colors.black,
                 ),
-              ],
+                onPressed: () {
+                  setState(() {
+                    _isMuted = !_isMuted;
+                  });
+                  // mute 상태에 따라 TTS의 볼륨을 조절합니다.
+                  ttsService.setMute(_isMuted);
+                },
+              ),
+            )
+          ],
+        ),
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 작품 이미지
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Semantics(
+                label: '작품 이미지: ${widget.title}',
+                image: true,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    widget.imageUrl,
+                    width: double.infinity,
+                    height: 200,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        width: double.infinity,
+                        height: 200,
+                        color: Colors.grey[300],
+                        child: const Center(child: CircularProgressIndicator()),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: double.infinity,
+                        height: 200,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.error),
+                      );
+                    },
+                  ),
+                ),
+              ),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    decoration: InputDecoration(
-                      hintText: '메시지를 입력하세요',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
+            const SizedBox(height: 16),
+            // 대화 목록
+            Expanded(
+              child: Stack(
+                children: [
+                  ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: conversation.length,
+                    itemBuilder: (context, index) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (conversation[index]["question"]!.isNotEmpty)
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: Semantics(
+                                // label: '사용자 메시지: ${conversation[index]["question"]}',
+                                label: '사용자 메시지',
+                                child: _buildUserMessageBlock(conversation[index]["question"]!),
+                              ),
+                            ),
+                          const SizedBox(height: 12),
+                          if (conversation[index]["response"]!.isNotEmpty)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Semantics(
+                                // label: '봇 응답: ${conversation[index]["response"]}',
+                                label: '봇 응답',
+                                child: _buildBotResponseBlock(conversation[index]["response"]!),
+                              ),
+                            ),
+                          const SizedBox(height: 24),
+                        ],
+                      );
+                    },
+                  ),
+                  if (_isLoading)
+                    const Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 20,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                ],
+              ),
+            ),
+            // 입력 영역
+            Semantics(
+              container: true,
+              label: '메시지 입력 영역',
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Semantics(
+                        label: '메시지 입력 필드',
+                        textField: true,
+                        child: TextField(
+                          controller: _textController,
+                          decoration: InputDecoration(
+                            hintText: '메시지를 입력하세요',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.grey[200],
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          ),
+                          style: const TextStyle(color: Colors.black87, fontSize: 16),
+                          onSubmitted: (_) => _handleTextSubmit(),
+                        ),
                       ),
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     ),
-                    style: const TextStyle(color: Colors.black87, fontSize: 16),
-                    onSubmitted: (_) => _handleTextSubmit(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _isLoading ? null : (_isListening ? _stopVoiceRecognition : _startVoiceRecognition),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _isLoading
-                          ? Colors.grey
-                          : (_isListening ? Colors.red : const Color(0xFF1E40AF)),
+                    const SizedBox(width: 8),
+                    Semantics(
+                      label: _isListening ? '음성 인식 중지 버튼' : '음성 인식 시작 버튼',
+                      button: true,
+                      child: GestureDetector(
+                        onTap: _isLoading ? null : (_isListening ? _stopVoiceRecognition : _startVoiceRecognition),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _isLoading
+                                ? Colors.grey
+                                : (_isListening ? Colors.red : const Color(0xFF1E40AF)),
+                          ),
+                          child: const Icon(
+                            Icons.mic,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.mic,
-                      color: Colors.white,
-                      size: 24,
+                    const SizedBox(width: 8),
+                    Semantics(
+                      label: '메시지 보내기 버튼',
+                      button: true,
+                      child: IconButton(
+                        icon: const Icon(Icons.send),
+                        onPressed: _isLoading ? null : _handleTextSubmit,
+                        color: const Color(0xFF1E40AF),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _isLoading ? null : _handleTextSubmit,
-                  color: const Color(0xFF1E40AF),
-                ),
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

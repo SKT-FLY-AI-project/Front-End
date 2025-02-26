@@ -11,6 +11,7 @@ import 'dart:convert';
 import 'analysis_screen.dart';
 import '../config/app_config.dart';
 import '../services/auth_service.dart';
+import '../services/tts_service.dart';
 
 class CameraScreen extends StatefulWidget {
   final CameraDescription camera;
@@ -200,8 +201,8 @@ class _CameraScreenState extends State<CameraScreen> {
               MaterialPageRoute(
                 builder: (context) => AnalysisScreen(
                   imageUrl: jsonData['image_url'] ?? "",
-                  title: jsonData.containsKey('title') ? jsonData['title'] : "제목 없음",
-                  artist: jsonData.containsKey('artist') ? jsonData['artist'] : "작가 미상",
+                  title: jsonData['title'],
+                  artist: jsonData['artist'],
                   vlmDescription: jsonData['vlm_description'] ?? "설명 없음",
                   richDescription: jsonData['rich_description'] ?? "설명 없음",
                   dominantColors: (jsonData['dominant_colors'] as List)
@@ -268,14 +269,23 @@ class _CameraScreenState extends State<CameraScreen> {
       },
     );
   }
+  final TTSService ttsService = TTSService();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: () async {
+      await ttsService.stop();
+      return true;
+    },
+    child: Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            ttsService.stop();
+            Navigator.of(context).pop();
+          },
         ),
         title: const Text(
           "카메라",
@@ -411,7 +421,8 @@ class _CameraScreenState extends State<CameraScreen> {
                 ),
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }

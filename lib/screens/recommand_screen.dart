@@ -11,7 +11,8 @@ class RecommandScreen extends StatefulWidget {
 
   const RecommandScreen({
     Key? key,
-    this.imageUrl = 'https://artchemy-media.s3.ap-southeast-2.amazonaws.com/static/pictop.png',
+    this.imageUrl =
+    'https://artchemy-media.s3.ap-southeast-2.amazonaws.com/static/pictop.png',
     this.title = '별이 빛나는 밤',
     this.artist = '빈센트 반 고흐, 1889',
     this.richDescription =
@@ -31,7 +32,7 @@ class _RecommandScreenState extends State<RecommandScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // WillPopScope로 감싸서 안드로이드 물리적 뒤로가기 버튼 눌림 시 ttsService.stop() 호출
+    // WillPopScope로 감싸 안드로이드 물리적 뒤로가기 버튼 누를 때 ttsService.stop() 호출
     return WillPopScope(
       onWillPop: () async {
         await ttsService.stop();
@@ -59,16 +60,19 @@ class _RecommandScreenState extends State<RecommandScreen> {
           ),
         ),
         backgroundColor: Colors.black,
-        body: Padding(
+        body: SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 작품 메인 이미지
-              Expanded(
-                flex: 4,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(widget.imageUrl, width: double.infinity, fit: BoxFit.cover),
+              // 작품 메인 이미지 (고정 높이 지정)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  widget.imageUrl,
+                  width: double.infinity,
+                  height: 300,
+                  fit: BoxFit.cover,
                 ),
               ),
               const SizedBox(height: 16),
@@ -125,45 +129,42 @@ class _RecommandScreenState extends State<RecommandScreen> {
               ),
               const SizedBox(height: 16),
               // AI 분석 결과 (클릭 시 TTS 실행)
-              Expanded(
-                flex: 3,
-                child: GestureDetector(
-                  onTap: () {
-                    ttsService.speak(widget.richDescription);
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[900],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'AI 분석결과',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+              GestureDetector(
+                onTap: () {
+                  ttsService.speak(widget.richDescription);
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[900],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'AI 분석결과',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          widget.richDescription,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        widget.richDescription,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              // 대화하기 버튼 - VtsScreen으로 이동하면서 변수 전달
+              // 대화하기 버튼 - VtsScreen으로 이동하며 변수 전달
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
