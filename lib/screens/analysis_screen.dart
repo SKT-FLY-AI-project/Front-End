@@ -188,52 +188,64 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    ElevatedButton(
-                      onPressed: () async {
-                        final payload = {
-                          "request": "save",
-                          "image_url": widget.imageUrl,
-                          "title": widget.title,
-                          "artist": widget.artist,
-                          "rich_description": widget.richDescription,
-                        };
-                        String? userId = await AuthService.getUserId();
-                        final response = await http.post(
-                          Uri.parse("${AnalysisScreen._config.apiUrl}/chat/$userId/create"),
-                          headers: {"Content-Type": "application/json"},
-                          body: jsonEncode(payload),
-                        );
-                        if (response.statusCode == 200) {
-                          print("감상 저장 성공: ${response.body}");
-                        } else {
-                          print("감상 저장 실패: ${response.statusCode}");
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E40AF),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final payload = {
+                            "request": "save",
+                            "image_url": widget.imageUrl,
+                            "title": widget.title,
+                            "artist": widget.artist,
+                            "rich_description": widget.richDescription,
+                          };
+                          String? userId = await AuthService.getUserId();
+                          final response = await http.post(
+                            Uri.parse("${AnalysisScreen._config.apiUrl}/chat/$userId/create"),
+                            headers: {"Content-Type": "application/json"},
+                            body: jsonEncode(payload),
+                          );
+                          if (response.statusCode == 200) {
+                            print("감상 저장 성공: ${response.body}");
+                          } else {
+                            print("감상 저장 실패: ${response.statusCode}");
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1E40AF),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        child: const Text(
+                          '감상 저장하기',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
-                      child: const Text('감상 저장하기', style: TextStyle(color: Colors.white)),
                     ),
-                    OutlinedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => VtsScreen(
-                            imageUrl: widget.imageUrl,
-                            title: widget.title,
-                            artist: widget.artist,
-                            richDescription: widget.richDescription,
-                            dominantColors: widget.dominantColors,
-                          )),
-                        );
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF1E40AF),
-                        side: const BorderSide(color: Color(0xFF1E40AF)),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    const SizedBox(width: 10), // 버튼 간격 조정
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => VtsScreen(
+                              imageUrl: widget.imageUrl,
+                              title: widget.title,
+                              artist: widget.artist,
+                              richDescription: widget.richDescription,
+                              dominantColors: widget.dominantColors,
+                            )),
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF1E40AF),
+                          side: const BorderSide(color: Color(0xFF1E40AF)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        child: const Text(
+                          '대화하기',
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      child: const Text('대화하기'),
                     ),
                   ],
                 ),

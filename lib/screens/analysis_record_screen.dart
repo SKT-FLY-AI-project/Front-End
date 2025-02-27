@@ -199,14 +199,22 @@ class _AnalysisRecordScreenState extends State<AnalysisRecordScreen> {
       builder: (context) {
         return Dialog(
           backgroundColor: Colors.transparent,
-          child: InteractiveViewer(
-            panEnabled: true,
-            boundaryMargin: const EdgeInsets.all(20),
-            minScale: 1,
-            maxScale: 3.0,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(widget.imageUrl),
+          child: Semantics(
+            label: '작품 이미지 확대보기. 두 손가락으로 핀치 줌을 사용하세요.',
+            image: true,
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.9,
+              height: MediaQuery.of(context).size.height * 0.9,
+              child: InteractiveViewer(
+                panEnabled: true,
+                boundaryMargin: const EdgeInsets.all(20),
+                minScale: 1,
+                maxScale: 3.0,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(widget.imageUrl, fit: BoxFit.contain),
+                ),
+              ),
             ),
           ),
         );
@@ -229,84 +237,109 @@ class _AnalysisRecordScreenState extends State<AnalysisRecordScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 이미지 영역: 터치하면 확대 다이얼로그 호출
               GestureDetector(
                 onTap: () => _showImageDialog(context),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(widget.imageUrl, width: double.infinity, fit: BoxFit.cover),
+                child: Semantics(
+                  label: '작품 이미지. 터치하면 확대하여 볼 수 있습니다.',
+                  image: true,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(widget.imageUrl,
+                        width: double.infinity, fit: BoxFit.cover),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
+              // 제목 및 작가 정보 영역
               GestureDetector(
                 onTap: () => _speak("제목, ${widget.title}. 작가, ${widget.artist}."),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 5,
-                        spreadRadius: 2,
+                child: Semantics(
+                  label: '작품 제목 및 작가 정보.',
+                  button: true,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 5,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.title,
+                            style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.artist,
+                            style: const TextStyle(
+                                fontSize: 14, color: Color(0xFF1E40AF)),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // AI 분석 결과 영역
+              GestureDetector(
+                onTap: () => _speak("AI 분석 결과입니다. ${widget.richDescription}"),
+                child: Semantics(
+                  // label: 'AI 분석 결과. 터치하면 TTS로 분석 결과를 읽어줍니다.',
+                  button: true,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF1E40AF), width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 5,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          widget.title,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                        const Text(
+                          'AI 분석결과',
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 8),
                         Text(
-                          widget.artist,
-                          style: const TextStyle(fontSize: 14, color: Color(0xFF1E40AF)),
+                          widget.richDescription,
+                          style: const TextStyle(
+                              fontSize: 14, color: Colors.black87),
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              GestureDetector(
-                onTap: () => _speak("AI 분석 결과입니다. ${widget.richDescription}"),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF1E40AF), width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 5,
-                        spreadRadius: 2,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'AI 분석결과',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        widget.richDescription,
-                        style: const TextStyle(fontSize: 14, color: Colors.black87),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
               const SizedBox(height: 30),
+              // 삭제하기 버튼
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

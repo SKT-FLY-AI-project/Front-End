@@ -1,31 +1,63 @@
 import 'package:flutter/material.dart';
 import '../services/storage_service.dart';
+import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'diary_screen.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MyPageScreen extends StatefulWidget {
+  const MyPageScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: Colors.white,
-        primaryColor: const Color(0xFF1E40AF),
-        fontFamily: 'Pretendard', // 한글 폰트 적용 (앱에 폰트 추가 필요)
-      ),
-      home: const MyPageScreen(),
-    );
-  }
+  State<MyPageScreen> createState() => _MyPageScreenState();
 }
 
-class MyPageScreen extends StatelessWidget {
-  const MyPageScreen({super.key});
+class _MyPageScreenState extends State<MyPageScreen> {
+  bool isLoading = true;
+  Map<String, dynamic>? userData;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final userInfo = await AuthService.fetchUserInfo();
+
+      setState(() {
+        userData = userInfo;
+        isLoading = false;
+      });
+    } catch (e) {
+      print('사용자 정보 로드 중 오류: $e');
+      setState(() {
+        isLoading = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('사용자 정보를 불러오는데 실패했습니다.'),
+            backgroundColor: Color(0xFF1E40AF),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  // 서비스 준비 중 메시지 표시 함수
+  void _showServicePreparingMessage(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('서비스 준비 중입니다.'),
+        backgroundColor: Color(0xFF1E40AF),
+        behavior: SnackBarBehavior.floating,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
 
   Future<void> _showLogoutConfirmationDialog(BuildContext context) async {
     final confirm = await showDialog<bool>(
@@ -177,12 +209,20 @@ class MyPageScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF1E40AF)),
+        ),
+      );
+    }
+
     final size = MediaQuery.of(context).size;
     final screenHeight = size.height;
     final screenWidth = size.width;
 
     return Scaffold(
-      // backgroundColor: Colors.grey[50],
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -191,7 +231,7 @@ class MyPageScreen extends StatelessWidget {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: const BoxDecoration(
-              color: Colors.transparent, // 흰색 대신 투명하게 변경
+              color: Colors.transparent,
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.arrow_back, color: Colors.black87, size: 20),
@@ -214,13 +254,13 @@ class MyPageScreen extends StatelessWidget {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: const BoxDecoration(
-                color: Colors.transparent, // 투명하게 변경
+                color: Colors.transparent,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.settings_outlined, color: Colors.black87, size: 20),
             ),
             onPressed: () {
-              // 설정 화면으로 이동
+              _showServicePreparingMessage(context);
             },
           ),
         ],
@@ -276,22 +316,22 @@ class MyPageScreen extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // 이름과 이메일
-                        const Column(
+                        // 이름과 이메일 - API에서 가져온 데이터로 표시
+                        Column(
                           children: [
                             Text(
-                              "김민수",
-                              style: TextStyle(
+                              userData?['user_name'] ?? "사용자",
+                              style: const TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF1E3A8A),
                                 letterSpacing: -0.5,
                               ),
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
-                              "rlaalstn21@naver.com",
-                              style: TextStyle(
+                              userData?['user_id'] ?? "이메일 정보 없음",
+                              style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.black54,
                               ),
@@ -380,6 +420,9 @@ class MyPageScreen extends StatelessWidget {
                     icon: Icons.trending_up_rounded,
                     iconBgColor: const Color(0xFF4ADE80).withOpacity(0.1),
                     iconColor: const Color(0xFF4ADE80),
+                    onTap: () {
+                      _showServicePreparingMessage(context);
+                    },
                   ),
 
                   const SizedBox(height: 24),
@@ -406,6 +449,9 @@ class MyPageScreen extends StatelessWidget {
                     icon: Icons.notifications_outlined,
                     iconBgColor: const Color(0xFFFB7185).withOpacity(0.1),
                     iconColor: const Color(0xFFFB7185),
+                    onTap: () {
+                      _showServicePreparingMessage(context);
+                    },
                   ),
 
                   buildMenuButton(
@@ -415,6 +461,9 @@ class MyPageScreen extends StatelessWidget {
                     icon: Icons.accessibility_new_rounded,
                     iconBgColor: const Color(0xFFF59E0B).withOpacity(0.1),
                     iconColor: const Color(0xFFF59E0B),
+                    onTap: () {
+                      _showServicePreparingMessage(context);
+                    },
                   ),
 
                   buildMenuButton(
@@ -424,6 +473,9 @@ class MyPageScreen extends StatelessWidget {
                     icon: Icons.person_outline_rounded,
                     iconBgColor: const Color(0xFF6366F1).withOpacity(0.1),
                     iconColor: const Color(0xFF6366F1),
+                    onTap: () {
+                      _showServicePreparingMessage(context);
+                    },
                   ),
 
                   buildMenuButton(
@@ -434,9 +486,12 @@ class MyPageScreen extends StatelessWidget {
                     iconBgColor: const Color(0xFF64748B).withOpacity(0.1),
                     iconColor: const Color(0xFF64748B),
                     showDivider: false,
+                    onTap: () {
+                      _showServicePreparingMessage(context);
+                    },
                   ),
 
-                  // 로그아웃 버튼 (여기를 수정함!)
+                  // 로그아웃 버튼
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24),
                     child: GestureDetector(
