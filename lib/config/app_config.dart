@@ -18,10 +18,10 @@ class AppConfig {
   // String baseUrl = "https://gazelle-magnetic-amazingly.ngrok-free.app";
   // String apiUrl = "https://gazelle-magnetic-amazingly.ngrok-free.app/api";
   // String wsUrl = "wss://gazelle-magnetic-amazingly.ngrok-free.app/ws";
-  String domain = "172.23.251.15:8000";
-  String baseUrl = "http:/172.23.251.15:8000";
-  String apiUrl = "http://172.23.251.15:8000/api";
-  String wsUrl = "ws://172.23.251.15:8000/ws";
+  String domain = "192.168.11.14:8000";
+  String baseUrl = "http:/1192.168.11.14:8000";
+  String apiUrl = "http://192.168.11.14:8000/api";
+  String wsUrl = "ws://192.168.11.14:8000/ws";
   // String baseUrl = "https://awfully-electric-wren.ngrok-free.app";
   // String apiUrl = "https://awfully-electric-wren.ngrok-free.app/api";
   // String wsUrl = "ws://awfully-electric-wren.ngrok-free.app/ws";
