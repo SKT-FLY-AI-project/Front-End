@@ -34,12 +34,32 @@ class AnalysisScreen extends StatefulWidget {
   _AnalysisScreenState createState() => _AnalysisScreenState();
 }
 
-class _AnalysisScreenState extends State<AnalysisScreen> {
+class _AnalysisScreenState extends State<AnalysisScreen> with WidgetsBindingObserver {
   final TTSService ttsService = TTSService();
+  bool _isActiveScreen = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // 앱 생명주기 관찰자 등록
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 앱이 백그라운드로 가거나 비활성화될 때 TTS 중지
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.detached) {
+      ttsService.stop();
+    }
+  }
 
   // 텍스트 읽기 함수
   Future<void> _speak(String text) async {
-    await ttsService.speak(text);
+    if (_isActiveScreen) {
+      await ttsService.speak(text);
+    }
   }
 
   // 이미지 다이얼로그
@@ -68,6 +88,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   void dispose() {
     // 화면 종료 시 TTS 종료
     ttsService.stop();
+    // 앱 생명주기 관찰자 제거
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -225,16 +247,33 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                     Expanded(
                       child: OutlinedButton(
                         onPressed: () {
+                          // 다른 화면으로 이동하기 전에 TTS 중지
+                          ttsService.stop();
+
+                          // 화면 비활성 상태로 변경
+                          setState(() {
+                            _isActiveScreen = false;
+                          });
+
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => VtsScreen(
-                              imageUrl: widget.imageUrl,
-                              title: widget.title,
-                              artist: widget.artist,
-                              richDescription: widget.richDescription,
-                              dominantColors: widget.dominantColors,
-                            )),
-                          );
+                            MaterialPageRoute(
+                                builder: (context) => VtsScreen(
+                                  imageUrl: widget.imageUrl,
+                                  title: widget.title,
+                                  artist: widget.artist,
+                                  richDescription: widget.richDescription,
+                                  dominantColors: widget.dominantColors,
+                                )
+                            ),
+                          ).then((_) {
+                            // 이 화면으로 돌아왔을 때 다시 활성화
+                            if (mounted) {
+                              setState(() {
+                                _isActiveScreen = true;
+                              });
+                            }
+                          });
                         },
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFF1E40AF),
