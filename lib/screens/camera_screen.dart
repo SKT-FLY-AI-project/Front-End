@@ -196,11 +196,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
         // 객체가 탐지되었고, 음소거가 아니며, 처리 중이 아닐 때 음성 안내
         if (_objectDetected && !_isMuted && !_isProcessing && _isActiveScreen) {
-          if (_objectCentered) {
-            await flutterTts.speak("객체가 중앙에 위치했습니다.");
-          } else if (data.containsKey('direction')) {
-            await flutterTts.speak(data['direction']);
-          }
+          // if (_objectCentered) {
+          //   await flutterTts.speak("객체가 중앙에 위치했습니다.");
+          // } else if (data.containsKey('direction')) {
+          //   await flutterTts.speak(data['direction']);
+          // }
+          await flutterTts.speak(data['direction']);
         }
       }
     } catch (e) {
@@ -493,12 +494,15 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
                     color: Colors.black.withOpacity(0.7),
-                    child: Text(
-                      _objectCentered
-                          ? "객체가 중앙에 위치했습니다."
-                          : (_detectionData!.containsKey('direction')
-                          ? _detectionData!['direction']
-                          : "객체를 중앙으로 이동하세요"),
+                    child:
+                      Text(
+                      //   _objectCentered
+                      //     ? "객체가 중앙에 위치했습니다."
+                      //     : (_detectionData!.containsKey('direction')
+                      //     ? _detectionData!['direction']
+                      //     : "객체를 중앙으로 이동하세요"
+                      //   ),
+                      _detectionData!['direction'],
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,

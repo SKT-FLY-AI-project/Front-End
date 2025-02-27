@@ -19,7 +19,7 @@ class AppConfig {
   // String apiUrl = "https://gazelle-magnetic-amazingly.ngrok-free.app/api";
   // String wsUrl = "wss://gazelle-magnetic-amazingly.ngrok-free.app/ws";
   String domain = "192.168.11.14:8000";
-  String baseUrl = "http:/1192.168.11.14:8000";
+  String baseUrl = "http://192.168.11.14:8000";
   String apiUrl = "http://192.168.11.14:8000/api";
   String wsUrl = "ws://192.168.11.14:8000/ws";
   // String baseUrl = "https://awfully-electric-wren.ngrok-free.app";
