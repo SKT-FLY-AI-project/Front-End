@@ -30,7 +30,7 @@ class _CameraScreenState extends State<CameraScreen> {
   double _minZoom = 1.0;
   double _maxZoom = 8.0;
   final Dio _dio = Dio(BaseOptions(
-    followRedirects: true,  // 리다이렉트 자동 처리를 활성화
+    followRedirects: true,
   ));
 
   // 화면에 출력되는 로딩 메시지 (TTS와 분리됨)
@@ -42,10 +42,16 @@ class _CameraScreenState extends State<CameraScreen> {
   // 분석 완료 여부 (분석 완료 TTS 중복 방지)
   bool _analysisCompleted = false;
 
+  // 객체 탐지 정보
+  Map<String, dynamic>? _detectionData;
+  bool _objectDetected = false;
+  bool _objectCentered = false;
+
   // TTS 및 배경음악 관련 변수
   late FlutterTts flutterTts;
   late AudioPlayer audioPlayer;
   Timer? friendlyMessageTimer; // 주기적인 TTS 안내 메시지 타이머
+  Timer? detectionTimer; // 주기적인 객체 탐지 타이머
 
   // 음소거 여부 상태 변수
   bool _isMuted = false;
@@ -75,6 +81,9 @@ class _CameraScreenState extends State<CameraScreen> {
       _minZoom = await _controller.getMinZoomLevel();
       _maxZoom = await _controller.getMaxZoomLevel();
       setState(() {});
+
+      // 카메라 초기화 후 객체 탐지 타이머 시작
+      _startObjectDetection();
     }).catchError((e) {
       print("카메라 초기화 오류: $e");
     });
@@ -85,6 +94,7 @@ class _CameraScreenState extends State<CameraScreen> {
     _controller.dispose();
     audioPlayer.dispose();
     friendlyMessageTimer?.cancel();
+    detectionTimer?.cancel();
     super.dispose();
   }
 
@@ -93,6 +103,70 @@ class _CameraScreenState extends State<CameraScreen> {
       _currentZoom = zoom.clamp(_minZoom, _maxZoom);
     });
     _controller.setZoomLevel(_currentZoom);
+  }
+
+  // 정기적인 객체 탐지 시작
+  void _startObjectDetection() {
+    detectionTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) async {
+      if (!_isProcessing && _controller.value.isInitialized) {
+        await _detectObjectInFrame();
+      }
+    });
+  }
+
+  // 현재 카메라 프레임에서 객체 탐지
+  Future<void> _detectObjectInFrame() async {
+    if (!mounted || _isProcessing) return;
+
+    try {
+      final XFile image = await _controller.takePicture();
+      await _sendImageForDetection(File(image.path));
+    } catch (e) {
+      print("객체 탐지 중 오류 발생: $e");
+    }
+  }
+
+  // 객체 탐지를 위한 이미지 전송
+  Future<void> _sendImageForDetection(File imageFile) async {
+    try {
+      String fileName = imageFile.path.split('/').last;
+      String? mimeType = lookupMimeType(imageFile.path) ?? "image/jpeg";
+
+      FormData detectFormData = FormData.fromMap({
+        "file": await MultipartFile.fromFile(
+          imageFile.path,
+          filename: fileName,
+          contentType: MediaType.parse(mimeType),
+        ),
+      });
+
+      // 객체 탐지 엔드포인트로 요청 (단일 객체만 탐지하도록 파라미터 추가)
+      var response = await _dio.post(
+        "${_config.apiUrl}/camera/detect/", // 객체 탐지 엔드포인트
+        data: detectFormData,
+        queryParameters: {"max_objects": 1}, // 단일 객체만 탐지
+      );
+
+      if (response.statusCode == 200) {
+        Map<String, dynamic> data = response.data;
+        setState(() {
+          _detectionData = data;
+          _objectDetected = data['detected'] ?? false;
+          _objectCentered = data['centered'] ?? false;
+        });
+
+        // 객체가 탐지되었고, 음소거가 아니며, 처리 중이 아닐 때 음성 안내
+        if (_objectDetected && !_isMuted && !_isProcessing) {
+          if (_objectCentered) {
+            await flutterTts.speak("객체가 중앙에 위치했습니다.");
+          } else if (data.containsKey('direction')) {
+            await flutterTts.speak(data['direction']);
+          }
+        }
+      }
+    } catch (e) {
+      print("객체 탐지 API 요청 오류: $e");
+    }
   }
 
   // 촬영 버튼을 누르면 카메라 프리뷰를 일시 정지하고, 로딩 다이얼로그(오버레이)와 함께 프로세스 시작
@@ -275,155 +349,259 @@ class _CameraScreenState extends State<CameraScreen> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-      await ttsService.stop();
-      return true;
-    },
-    child: Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            ttsService.stop();
-            Navigator.of(context).pop();
-          },
-        ),
-        title: const Text(
-          "카메라",
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: Colors.black,
-        actions: [
-          IconButton(
-            icon: Icon(
-              _isMuted ? Icons.volume_off : Icons.volume_up,
-              color: Colors.white,
-            ),
+        await ttsService.stop();
+        return true;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
             onPressed: () {
-              setState(() {
-                _isMuted = !_isMuted;
-              });
-              if (_isMuted) {
-                // 음소거 시 재생 중인 음악 정지
-                audioPlayer.stop();
-              } else {
-                // 음소거 해제 시, 처리 중이면 음악 재생
-                if (_isProcessing) {
-                  audioPlayer.play(AssetSource('loading_music.mp3'), volume: 0.5);
-                }
-              }
+              ttsService.stop();
+              Navigator.of(context).pop();
             },
           ),
-        ],
-      ),
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              Expanded(
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    CameraPreview(_controller),
-                    // 촬영 버튼 누른 동안 카메라 프리뷰를 어둡게 처리
-                    if (_isProcessing)
-                      Container(
-                        color: Colors.black.withOpacity(0.3),
-                      ),
-                    Image.asset(
-                      'assets/guide_box.png',
-                      width: 300,
-                      height: 500,
-                      fit: BoxFit.contain,
-                    ),
-                  ],
-                ),
+          title: const Text(
+            "카메라",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: Colors.black,
+          actions: [
+            IconButton(
+              icon: Icon(
+                _isMuted ? Icons.volume_off : Icons.volume_up,
+                color: Colors.white,
               ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove, color: Colors.white),
-                      onPressed: () => _zoomCamera(_currentZoom - 0.1),
-                    ),
-                    Expanded(
-                      child: Slider(
-                        activeColor: Colors.white,
-                        min: _minZoom,
-                        max: _maxZoom,
-                        value: _currentZoom,
-                        onChanged: _isProcessing ? null : (value) => _zoomCamera(value),
+              onPressed: () {
+                setState(() {
+                  _isMuted = !_isMuted;
+                });
+                if (_isMuted) {
+                  // 음소거 시 재생 중인 음악 정지
+                  audioPlayer.stop();
+                } else {
+                  // 음소거 해제 시, 처리 중이면 음악 재생
+                  if (_isProcessing) {
+                    audioPlayer.play(AssetSource('loading_music.mp3'), volume: 0.5);
+                  }
+                }
+              },
+            ),
+          ],
+        ),
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                Expanded(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CameraPreview(_controller),
+                      // 촬영 버튼 누른 동안 카메라 프리뷰를 어둡게 처리
+                      if (_isProcessing)
+                        Container(
+                          color: Colors.black.withOpacity(0.3),
+                        ),
+                      // 객체 탐지 상자 표시
+                      if (_objectDetected && _detectionData != null && !_isProcessing)
+                        CustomPaint(
+                          painter: ObjectBoxPainter(
+                            x: _detectionData!['x'],
+                            y: _detectionData!['y'],
+                            width: _detectionData!['width'],
+                            height: _detectionData!['height'],
+                            isCentered: _objectCentered,
+                          ),
+                          child: Container(),
+                        ),
+                      // 중앙 가이드 박스
+                      Image.asset(
+                        'assets/guide_box.png',
+                        width: 300,
+                        height: 500,
+                        fit: BoxFit.contain,
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add, color: Colors.white),
-                      onPressed: () => _zoomCamera(_currentZoom + 0.1),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: GestureDetector(
-                  onTap: () async {
-                    try {
-                      final image = await _controller.takePicture();
-                      if (!mounted) return;
-                      _uploadAndProcessImage(image.path);
-                    } catch (e) {
-                      print("Error taking picture: $e");
-                    }
-                  },
-                  child: Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-          // 로딩 다이얼로그(오버레이): _isProcessing true일 때 중앙에 표시
-          if (_isProcessing)
-            Positioned.fill(
-              child: IgnorePointer(
-                ignoring: false,
-                child: Container(
-                  color: Colors.black.withOpacity(0.5),
-                  child: Center(
-                    child: Dialog(
-                      backgroundColor: Colors.black.withOpacity(0.7),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
-                            const SizedBox(height: 20),
-                            Text(
-                              _currentStatus,
-                              style: const TextStyle(color: Colors.white, fontSize: 16),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+                // 객체 위치 안내 텍스트
+                if (_objectDetected && _detectionData != null && !_isProcessing)
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                    color: Colors.black.withOpacity(0.7),
+                    child: Text(
+                      _objectCentered
+                          ? "객체가 중앙에 위치했습니다."
+                          : (_detectionData!.containsKey('direction')
+                          ? _detectionData!['direction']
+                          : "객체를 중앙으로 이동하세요"),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove, color: Colors.white),
+                        onPressed: () => _zoomCamera(_currentZoom - 0.1),
+                      ),
+                      Expanded(
+                        child: Slider(
+                          activeColor: Colors.white,
+                          min: _minZoom,
+                          max: _maxZoom,
+                          value: _currentZoom,
+                          onChanged: _isProcessing ? null : (value) => _zoomCamera(value),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add, color: Colors.white),
+                        onPressed: () => _zoomCamera(_currentZoom + 0.1),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: GestureDetector(
+                    onTap: _objectCentered && !_isProcessing
+                        ? () async {
+                      try {
+                        final image = await _controller.takePicture();
+                        if (!mounted) return;
+                        _uploadAndProcessImage(image.path);
+                      } catch (e) {
+                        print("Error taking picture: $e");
+                      }
+                    }
+                        : null,
+                    child: Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        color: _objectCentered && !_isProcessing ? Colors.white : Colors.grey,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            // 로딩 다이얼로그(오버레이): _isProcessing true일 때 중앙에 표시
+            if (_isProcessing)
+              Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: false,
+                  child: Container(
+                    color: Colors.black.withOpacity(0.5),
+                    child: Center(
+                      child: Dialog(
+                        backgroundColor: Colors.black.withOpacity(0.7),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                _currentStatus,
+                                style: const TextStyle(color: Colors.white, fontSize: 16),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
     );
+  }
+}
+
+// 객체 탐지 결과를 시각화하는 CustomPainter
+class ObjectBoxPainter extends CustomPainter {
+  final int x;
+  final int y;
+  final int width;
+  final int height;
+  final bool isCentered;
+
+  ObjectBoxPainter({
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+    required this.isCentered,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = isCentered ? Colors.green : Colors.red
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
+
+    // 화면 크기에 맞게 좌표 변환
+    double scaleX = size.width / 1080;  // 카메라 해상도를 기준으로 조정해야 할 수 있음
+    double scaleY = size.height / 1920; // 카메라 해상도를 기준으로 조정해야 할 수 있음
+
+    // 바운딩 박스 그리기
+    Rect rect = Rect.fromLTWH(
+      x * scaleX,
+      y * scaleY,
+      width * scaleX,
+      height * scaleY,
+    );
+    canvas.drawRect(rect, paint);
+
+    // 중앙 십자가 그리기 (객체의 중심점)
+    double centerX = rect.center.dx;
+    double centerY = rect.center.dy;
+
+    Paint centerPaint = Paint()
+      ..color = isCentered ? Colors.green : Colors.red
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    canvas.drawLine(
+      Offset(centerX - 10, centerY),
+      Offset(centerX + 10, centerY),
+      centerPaint,
+    );
+    canvas.drawLine(
+      Offset(centerX, centerY - 10),
+      Offset(centerX, centerY + 10),
+      centerPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant ObjectBoxPainter oldDelegate) {
+    return x != oldDelegate.x ||
+        y != oldDelegate.y ||
+        width != oldDelegate.width ||
+        height != oldDelegate.height ||
+        isCentered != oldDelegate.isCentered;
   }
 }

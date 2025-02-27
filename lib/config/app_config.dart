@@ -14,11 +14,17 @@ class AppConfig {
   AppConfig._internal();
 
   // API 설정
-  String domain = "gazelle-magnetic-amazingly.ngrok-free.app";
-  String baseUrl = "https://gazelle-magnetic-amazingly.ngrok-free.app/";
-  String apiUrl = "https://gazelle-magnetic-amazingly.ngrok-free.app/api";
-  String wsUrl = "wss://gazelle-magnetic-amazingly.ngrok-free.app/ws"; // wsUrl도 보안을 위해 wss://로 사용
-
+  // String domain = "gazelle-magnetic-amazingly.ngrok-free.app";
+  // String baseUrl = "https://gazelle-magnetic-amazingly.ngrok-free.app";
+  // String apiUrl = "https://gazelle-magnetic-amazingly.ngrok-free.app/api";
+  // String wsUrl = "wss://gazelle-magnetic-amazingly.ngrok-free.app/ws";
+  String domain = "172.23.251.15:8000";
+  String baseUrl = "http:/172.23.251.15:8000";
+  String apiUrl = "http://172.23.251.15:8000/api";
+  String wsUrl = "ws://172.23.251.15:8000/ws";
+  // String baseUrl = "https://awfully-electric-wren.ngrok-free.app";
+  // String apiUrl = "https://awfully-electric-wren.ngrok-free.app/api";
+  // String wsUrl = "ws://awfully-electric-wren.ngrok-free.app/ws";
   // 사용자 정보
   String defaultUserId = "temp";
 
